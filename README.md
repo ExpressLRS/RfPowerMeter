@@ -10,7 +10,7 @@ install the required libraries
 
 # RF Meter Logger (rf_meter_logger.py)
 
-A Python script to log the measured values from a ImmersionRC RF meter, saving the results to a timestamped CSV file.
+A Python script to log the measured values from a ImmersionRC RF meter v2, saving the results to a timestamped CSV file.
 
 ## Usage
 If you run the script without any arguments, it will display usage instructions, the list of supported frequencies, and available serial ports.
