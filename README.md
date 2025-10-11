@@ -1,5 +1,9 @@
 # RfPowerMeter
 
+RfPowerMeter is an open-source toolkit for logging and visualizing RF power measurements from the ImmersionRC RF Meter v2. It provides Python scripts to record power levels into CSV files and generate plots for detailed analysis and calibration.
+
+Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
+
 # Before use:
 
 install `uv` python package manager: https://docs.astral.sh/uv/getting-started/installation/
