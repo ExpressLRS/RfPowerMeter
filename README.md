@@ -4,6 +4,10 @@ RfPowerMeter is an open-source toolkit for logging and visualizing RF power meas
 
 Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
 
+## Screenshot
+
+![Example RF Power Plot](screenshots/plot.png)
+
 ## Setup
 
 Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
