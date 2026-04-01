@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 import time
 from datetime import datetime
 
@@ -29,12 +30,31 @@ def auto_detect_port() -> str:
     return ports[0]
 
 
+_DURATION_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(h|m|s)", re.IGNORECASE)
+_UNIT_MULTIPLIERS = {"h": 3600, "m": 60, "s": 1}
+
+
+def parse_duration(value: str) -> float:
+    """Parse a duration string into seconds.
+
+    Supports: '90s', '30m', '2h', '1h30m', '1h30m15s', or plain number (seconds).
+    """
+    matches = _DURATION_PATTERN.findall(value)
+    if matches:
+        return sum(float(num) * _UNIT_MULTIPLIERS[unit.lower()] for num, unit in matches)
+    try:
+        return float(value)
+    except ValueError:
+        raise ValueError(f"Invalid duration format: '{value}'. Use e.g. '30m', '1h30m', '90s'.")
+
+
 def record(
     port: str,
     freq: int,
     group: str,
     test: str,
     attenuation: float = 0.0,
+    duration_seconds: float | None = None,
 ) -> None:
     freq_index = FREQUENCIES.index(freq)
     freq_command = f"F{freq_index}\n".encode()
@@ -48,6 +68,8 @@ def record(
     print(f"Serial port: {port}")
     print(f"Frequency: {freq} MHz")
     print(f"Attenuation: {attenuation}")
+    if duration_seconds:
+        print(f"Duration: {duration_seconds:.0f}s")
     print(f"Output: {filename}")
 
     try:
@@ -69,6 +91,10 @@ def record(
             ser.reset_input_buffer()
 
             while True:
+                if duration_seconds and (time.time() - start_time) >= duration_seconds:
+                    print(f"\nDuration reached. Data saved to {filename}")
+                    break
+
                 time.sleep(0.4)
                 ser.write(b"E\n")
                 time.sleep(0.1)

@@ -8,6 +8,7 @@ def plot(
     max_time: float = 60.0,
     outlier_percentile: float = 0.01,
     window_size: int = 100,
+    title: str | None = None,
 ) -> None:
     column_names = ["timestamp in ms", "RF power (dBm)", "RF power (mW)"]
     data = pd.read_csv(filepath, names=column_names, usecols=[0, 1, 2])
@@ -34,6 +35,9 @@ def plot(
     data["RF power (mW) MA"] = data["RF power (mW)"].rolling(window=window_size).mean()
 
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5, 6))
+
+    if title:
+        fig.suptitle(title, fontsize=10)
 
     ax1.plot(data["timestamp in minutes"], data["RF power (dBm)"], "k.", markersize=2, label="Raw Data")
     ax1.plot(data["timestamp in minutes"], data["RF power (dBm) MA"], "b-", label="Moving Average")
