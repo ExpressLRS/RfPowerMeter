@@ -9,4 +9,12 @@ dependencies = [
     "pandas>=2.3.1",
     "pyqt6>=6.9.1",
     "pyserial>=3.5",
+    "typer>=0.15",
 ]
+
+[project.scripts]
+rfmeter = "rfmeter.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
