@@ -23,10 +23,7 @@ def auto_detect_port() -> str:
         raise RuntimeError("No USB serial ports found. Check your device connection.")
     if len(ports) > 1:
         port_list = ", ".join(ports)
-        raise RuntimeError(
-            f"Multiple USB serial ports found: {port_list}. "
-            "Please specify one with --port."
-        )
+        raise RuntimeError(f"Multiple USB serial ports found: {port_list}. Please specify one with --port.")
     return ports[0]
 
 

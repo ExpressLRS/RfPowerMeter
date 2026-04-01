@@ -6,7 +6,8 @@ import typer
 
 from rfmeter import FREQUENCIES
 from rfmeter.plotter import plot as run_plot
-from rfmeter.recorder import auto_detect_port, list_serial_ports, parse_duration, record as run_record
+from rfmeter.recorder import auto_detect_port, list_serial_ports, parse_duration
+from rfmeter.recorder import record as run_record
 
 app = typer.Typer(help="ImmersionRC RF Power Meter CLI")
 
@@ -25,7 +26,9 @@ def record(
     freq: Annotated[int, typer.Option("--freq", "-f", help="Frequency in MHz", callback=validate_freq)],
     port: Annotated[Optional[str], typer.Option("--port", "-p", help="Serial port (auto-detects if omitted)")] = None,
     attenuation: Annotated[float, typer.Option("--attenuation", "-a", help="dBm offset")] = 0.0,
-    duration: Annotated[Optional[str], typer.Option("--duration", "-d", help="Recording duration (e.g. '30m', '1h30m', '90s')")] = None,
+    duration: Annotated[
+        Optional[str], typer.Option("--duration", "-d", help="Recording duration (e.g. '30m', '1h30m', '90s')")
+    ] = None,
 ) -> None:
     """Record RF power measurements to a CSV file."""
     if port is None:
@@ -89,7 +92,9 @@ def plot(
     test: Annotated[Optional[str], typer.Option("--test", "-t", help="Filter by test name")] = None,
     correction: Annotated[float, typer.Option("--correction", "-c", help="dBm correction offset")] = 0.0,
     max_time: Annotated[float, typer.Option("--max-time", help="Max time to display in minutes")] = 60.0,
-    outlier_percentile: Annotated[float, typer.Option("--outlier-percentile", help="Bottom percentile to filter")] = 0.01,
+    outlier_percentile: Annotated[
+        float, typer.Option("--outlier-percentile", help="Bottom percentile to filter")
+    ] = 0.01,
     window_size: Annotated[int, typer.Option("--window-size", help="Moving average window size")] = 100,
 ) -> None:
     """Plot RF power measurements from a CSV file.
