@@ -4,81 +4,92 @@ RfPowerMeter is an open-source toolkit for logging and visualizing RF power meas
 
 Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
 
-# Before use:
+## Setup
 
-install `uv` python package manager: https://docs.astral.sh/uv/getting-started/installation/
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/), then:
 
-install the required libraries
-
-```uv sync```
-
-# RF Meter Logger (rf_meter_logger.py)
-
-A Python script to log the measured values from a ImmersionRC RF meter v2, saving the results to a timestamped CSV file.
+```bash
+uv sync
+```
 
 ## Usage
-If you run the script without any arguments, it will display usage instructions, the list of supported frequencies, and available serial ports.
+
+### Record measurements
 
 ```bash
-uv run rf_meter_logger.py <serial_port> <frequency> [attenuation]
+rfmeter record --group <group> --test <test> --freq <frequency> [--port <port>] [--attenuation <value>] [--duration <duration>]
 ```
 
-- `<serial_port>`: The serial port to connect to (e.g., `COM3` on Windows or `/dev/ttyUSB0` on Linux/Mac).
-- `<frequency>`: Frequency in MHz. Must be one of the supported values (see below).
-- `[attenuation]`: (Optional) Attenuation value to add to dBm readings (float).
+- `--group`, `-g`: Test group folder name (e.g. `zerodrag`). Creates `logs/<group>/` directory automatically.
+- `--test`, `-t`: Test name (e.g. `868_ant_a`). Used in the output filename.
+- `--freq`, `-f`: Frequency in MHz. Must be one of the supported values (see below).
+- `--port`, `-p`: Serial port (e.g. `/dev/ttyUSB0`, `COM3`). Auto-detects if only one device is connected.
+- `--attenuation`, `-a`: dBm offset to add to readings (default: 0.0).
+- `--duration`, `-d`: Recording duration (e.g. `30s`, `30m`, `2h`, `1h30m`). Runs indefinitely if omitted.
 
-### Examples
+Output file: `logs/<group>/<test>_<YYMMDD-HHMMSS>.csv`
+
+#### Examples
 
 ```bash
-uv run rf_meter_logger.py COM3 900
-uv run rf_meter_logger.py /dev/ttyUSB0 2400 10.5
+# Auto-detect port, record at 868 MHz
+rfmeter record --group zerodrag --test 868_ant_a --freq 868
+
+# Record for 30 minutes
+rfmeter record -g zerodrag -t 868_ant_a -f 868 -d 30m
+
+# Specify port and attenuation
+rfmeter record -g zerodrag -t 868_ant_a -f 868 -p /dev/ttyUSB0 -a 10.5
 ```
 
-## Supported Frequencies
-- 35, 72, 433, 868, 900, 1200, 2400, 5600, 5650, 5700, 5750, 5800, 5850, 5900, 5950, 6000 (MHz)
-
-## Output
-- The script creates a CSV file named with the current date and time (e.g., `250417-235849.csv`).
-- Each line in the CSV contains:  
-  `timestamp (ms), dBm, mW`
-
-## Troubleshooting
-- If you see "No serial ports found," check your device connection and permissions.
-- If you get a serial error, ensure the port is correct and not in use by another application.
-
-
-# RF Power Logger Plotter (plot_powers.py)
-
-This script visualizes RF power data from a CSV file (generated from rf_meter_logger.py), providing both raw and moving average plots for dBm and mW values.
-
-## Features
-- Reads CSV files with columns: timestamp (ms), RF power (dBm), RF power (mW)
-- Optionally applies a correction offset to dBm values (e.g., for compensation of the RF meter)
-- Filters to the first hour of data (≤ 3,600,000 ms)
-- Excludes the lowest 1% of data (outliers) for both dBm and mW
-- Generates two subplots: one for dBm, one for mW
-
-## Usage
-```bash
-uv run plot_powers.py <csv_file> [correction]
-```
-
-- `<csv_file>`: Path to the CSV file to plot. The file should have three columns: timestamp in ms, RF power (dBm), RF power (mW), **without a header row**.
-- `[correction]` (optional): A numeric value (float) to add to all dBm readings (e.g., for calibration).
-
-### Example
-```bash
-uv run plot_powers.py data.csv
-```
-
-or with a correction offset:
+### Plot measurements
 
 ```bash
-uv run plot_powers.py data.csv -2.5
+rfmeter plot [<csv_file>] [--group <group>] [--test <test>] [--correction <value>] [--max-time <minutes>] [--outlier-percentile <value>] [--window-size <size>]
 ```
 
-## Output
+- `csv_file`: Path to CSV file. Optional — if omitted, auto-finds the latest recording.
+- `--group`, `-g`: Filter by test group folder.
+- `--test`, `-t`: Filter by test name (requires `--group`).
+- `--correction`, `-c`: dBm correction offset (default: 0.0).
+- `--max-time`: Max time to display in minutes (default: 60).
+- `--outlier-percentile`: Bottom percentile of data to filter out (default: 0.01).
+- `--window-size`: Moving average window size in samples (default: 100).
 
-- The script displays two plots:
-  - **RF Power (dBm)**: Raw data and moving average over time (minutes)
-  - **RF Power (mW)**: Raw data and moving average over time (minutes)
+#### Examples
+
+```bash
+# Plot the most recent recording across all groups
+rfmeter plot
+
+# Plot the latest recording in a group
+rfmeter plot --group zerodrag
+
+# Plot the latest recording matching a specific test
+rfmeter plot --group zerodrag --test 868_ant_a
+
+# Plot a specific file with options
+rfmeter plot logs/zerodrag/868_ant_a_260401-230000.csv --correction -2.5 --max-time 30
+```
+
+### List serial ports
+
+```bash
+rfmeter list-ports
+```
+
+## Supported Frequencies (MHz)
+
+35, 72, 433, 868, 900, 1200, 2400, 5600, 5650, 5700, 5750, 5800, 5850, 5900, 5950, 6000
+
+## Output Format
+
+CSV files contain three columns (no header): `timestamp_ms, dBm, mW`
+
+## Note
+
+If not installed globally, prefix commands with `uv run`:
+
+```bash
+uv run rfmeter record --group zerodrag --test 868_ant_a --freq 868
+```
