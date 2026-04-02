@@ -17,14 +17,38 @@ def list_serial_ports(usb_only: bool = True) -> list[str]:
     return [port.device for port in ports]
 
 
+IMMERSIONRC_VID = 1240
+IMMERSIONRC_PID = 10
+IMMERSIONRC_MANUFACTURER = "ImmersionRC"
+
+
+def is_immersionrc(port) -> bool:
+    if port.vid == IMMERSIONRC_VID and port.pid == IMMERSIONRC_PID:
+        return True
+    return port.manufacturer is not None and IMMERSIONRC_MANUFACTURER in port.manufacturer
+
+
+def find_immersionrc_ports() -> list[str]:
+    return [p.device for p in serial.tools.list_ports.comports() if is_immersionrc(p)]
+
+
 def auto_detect_port() -> str:
-    ports = list_serial_ports(usb_only=True)
-    if len(ports) == 0:
-        raise RuntimeError("No USB serial ports found. Check your device connection.")
+    ports = find_immersionrc_ports()
+    if len(ports) == 1:
+        return ports[0]
     if len(ports) > 1:
         port_list = ", ".join(ports)
-        raise RuntimeError(f"Multiple USB serial ports found: {port_list}. Please specify one with --port.")
-    return ports[0]
+        raise RuntimeError(f"Multiple ImmersionRC devices found: {port_list}. Please specify one with --port.")
+    # Fallback to any USB serial port
+    usb_ports = list_serial_ports(usb_only=True)
+    if len(usb_ports) == 0:
+        raise RuntimeError("No USB serial ports found. Check your device connection.")
+    if len(usb_ports) == 1:
+        return usb_ports[0]
+    port_list = ", ".join(usb_ports)
+    raise RuntimeError(
+        f"No ImmersionRC device found. Multiple USB ports available: {port_list}. Please specify one with --port."
+    )
 
 
 _DURATION_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(h|m|s)", re.IGNORECASE)
