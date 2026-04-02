@@ -1,12 +1,17 @@
 # RfPowerMeter
 
-RfPowerMeter is an open-source toolkit for logging and visualizing RF power measurements from the ImmersionRC RF Meter v2. It provides Python scripts to record power levels into CSV files and generate plots for detailed analysis and calibration.
+![Recorder](screenshots/recorder.png)
 
-Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance reliable, high-performance radio control technology.
+RfPowerMeter is an open-source toolkit for logging and visualizing RF power measurements from the ImmersionRC RF Meter
+v2. It provides Python scripts to record power levels into CSV files and generate plots for detailed analysis and
+calibration.
 
-## Screenshot
+Developed and maintained by **ExpressLRS LLC** and its passionate open source community, working together to advance
+reliable, high-performance radio control technology.
 
-![Example RF Power Plot](screenshots/plot.png)
+## Screenshots
+
+![Plot](screenshots/plot.png)
 
 ## Setup
 
