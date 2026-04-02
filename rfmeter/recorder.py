@@ -6,6 +6,9 @@ from datetime import datetime
 
 import serial
 import serial.tools.list_ports
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
 
 from rfmeter import BAUD_RATE, FREQUENCIES
 
@@ -69,6 +72,60 @@ def parse_duration(value: str) -> float:
         raise ValueError(f"Invalid duration format: '{value}'. Use e.g. '30m', '1h30m', '90s'.")
 
 
+def _format_elapsed(seconds: float) -> str:
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h:
+        return f"{h:d}:{m:02d}:{s:02d}"
+    return f"{m:02d}:{s:02d}"
+
+
+def _progress_bar(fraction: float, width: int = 20) -> str:
+    filled = int(fraction * width)
+    return "█" * filled + "░" * (width - filled)
+
+
+def _build_panel(
+    group: str,
+    test: str,
+    elapsed: float,
+    duration_seconds: float | None,
+    current_dBm: float,
+    current_mW: float,
+    min_dBm: float,
+    max_dBm: float,
+    sum_dBm: float,
+    min_mW: float,
+    max_mW: float,
+    sum_mW: float,
+    sample_count: int,
+) -> Panel:
+    lines = []
+
+    # Line 1: elapsed / progress
+    if duration_seconds:
+        fraction = min(elapsed / duration_seconds, 1.0)
+        pct = int(fraction * 100)
+        bar = _progress_bar(fraction)
+        lines.append(f"  {_format_elapsed(elapsed)} / {_format_elapsed(duration_seconds)}   {bar}  {pct}%")
+    else:
+        lines.append(f"  {_format_elapsed(elapsed)} elapsed  |  #{sample_count} samples")
+
+    # Line 2: current values
+    lines.append(f"  Current: {current_dBm:.3f} dBm  |  {current_mW:.2f} mW")
+    lines.append("")
+
+    # Lines 3-4: stats
+    if sample_count > 0:
+        avg_dBm = sum_dBm / sample_count
+        avg_mW = sum_mW / sample_count
+        lines.append(f"  dBm   min: {min_dBm:.3f}   max: {max_dBm:.3f}   avg: {avg_dBm:.3f}")
+        lines.append(f"  mW    min: {min_mW:.2f}    max: {max_mW:.2f}    avg: {avg_mW:.2f}")
+
+    content = Text("\n".join(lines))
+    return Panel(content, title=f"Recording: {group} / {test}", expand=False)
+
+
 def record(
     port: str,
     freq: int,
@@ -90,8 +147,9 @@ def record(
     print(f"Frequency: {freq} MHz")
     print(f"Attenuation: {attenuation}")
     if duration_seconds:
-        print(f"Duration: {duration_seconds:.0f}s")
+        print(f"Duration: {_format_elapsed(duration_seconds)}")
     print(f"Output: {filename}")
+    print()
 
     try:
         with serial.Serial(port, BAUD_RATE, timeout=1) as ser, open(filename, mode="w", newline="") as file:
@@ -111,30 +169,70 @@ def record(
 
             ser.reset_input_buffer()
 
-            while True:
-                if duration_seconds and (time.time() - start_time) >= duration_seconds:
-                    print(f"\nDuration reached. Data saved to {filename}")
-                    break
+            # Running stats
+            min_dBm = float("inf")
+            max_dBm = float("-inf")
+            sum_dBm = 0.0
+            min_mW = float("inf")
+            max_mW = float("-inf")
+            sum_mW = 0.0
+            sample_count = 0
+            current_dBm = 0.0
+            current_mW = 0.0
 
-                time.sleep(0.4)
-                ser.write(b"E\n")
-                time.sleep(0.1)
-                line = ser.readline().decode().strip()
-                ser.readline()
+            with Live(refresh_per_second=4) as live:
+                while True:
+                    elapsed = time.time() - start_time
 
-                timestamp = int((time.time() - start_time) * 1000)
+                    if duration_seconds and elapsed >= duration_seconds:
+                        break
 
-                try:
-                    dBm = round(float(line) + attenuation, 3)
-                    mW = round(10 ** (dBm / 10), 2)
-                except ValueError:
-                    continue
+                    time.sleep(0.4)
+                    ser.write(b"E\n")
+                    time.sleep(0.1)
+                    line = ser.readline().decode().strip()
+                    ser.readline()
 
-                print(f"{timestamp},{dBm},{mW}")
-                writer.writerow([timestamp, dBm, mW])
-                file.flush()
+                    timestamp = int((time.time() - start_time) * 1000)
+
+                    try:
+                        current_dBm = round(float(line) + attenuation, 3)
+                        current_mW = round(10 ** (current_dBm / 10), 2)
+                    except ValueError:
+                        continue
+
+                    sample_count += 1
+                    min_dBm = min(min_dBm, current_dBm)
+                    max_dBm = max(max_dBm, current_dBm)
+                    sum_dBm += current_dBm
+                    min_mW = min(min_mW, current_mW)
+                    max_mW = max(max_mW, current_mW)
+                    sum_mW += current_mW
+
+                    writer.writerow([timestamp, current_dBm, current_mW])
+                    file.flush()
+
+                    live.update(
+                        _build_panel(
+                            group=group,
+                            test=test,
+                            elapsed=elapsed,
+                            duration_seconds=duration_seconds,
+                            current_dBm=current_dBm,
+                            current_mW=current_mW,
+                            min_dBm=min_dBm,
+                            max_dBm=max_dBm,
+                            sum_dBm=sum_dBm,
+                            min_mW=min_mW,
+                            max_mW=max_mW,
+                            sum_mW=sum_mW,
+                            sample_count=sample_count,
+                        )
+                    )
+
+        print(f"Recording complete. {sample_count} samples saved to {filename}")
 
     except KeyboardInterrupt:
-        print(f"\nRecording stopped. Data saved to {filename}")
+        print(f"\nRecording stopped. {sample_count} samples saved to {filename}")
     except serial.SerialException as e:
         print(f"Serial error: {e}")
